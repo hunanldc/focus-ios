@@ -32,8 +32,12 @@ class URLBar: UIView {
     private let toolset = BrowserToolset()
     private let urlTextContainer = UIView()
     private let urlText = URLTextField()
+    private let truncatedUrlText = UITextView()
     private let lockIcon = UIImageView(image: #imageLiteral(resourceName: "icon_https"))
+    private let smallLockIcon = UIImageView(image: #imageLiteral(resourceName: "icon_https_small"))
     private let urlBarBackgroundView = UIView()
+    private let textAndLockContainer = UIView()
+    private let collapsedUrlBar = UIView()
 
     private var fullWidthURLTextConstraints = [Constraint]()
     private var centeredURLConstraints = [Constraint]()
@@ -58,7 +62,6 @@ class URLBar: UIView {
 
         addSubview(urlTextContainer)
 
-        let textAndLockContainer = UIView()
         urlTextContainer.addSubview(textAndLockContainer)
 
         lockIcon.isHidden = true
@@ -67,6 +70,26 @@ class URLBar: UIView {
         lockIcon.setContentCompressionResistancePriority(1000, for: .horizontal)
         lockIcon.setContentHuggingPriority(1000, for: .horizontal)
         textAndLockContainer.addSubview(lockIcon)
+
+        smallLockIcon.alpha = 0
+        lockIcon.isHidden = true
+        smallLockIcon.contentMode = .center
+        smallLockIcon.setContentCompressionResistancePriority(1000, for: .horizontal)
+        smallLockIcon.setContentHuggingPriority(1000, for: .horizontal)
+
+        truncatedUrlText.alpha = 0
+        truncatedUrlText.isUserInteractionEnabled = false
+        truncatedUrlText.font = UIConstants.fonts.truncatedUrlText
+        truncatedUrlText.tintColor = UIConstants.colors.urlTextFont
+        truncatedUrlText.backgroundColor = UIColor.clear
+        truncatedUrlText.contentMode = .center
+        truncatedUrlText.textColor = UIConstants.colors.urlTextFont
+        truncatedUrlText.setContentHuggingPriority(1000, for: .vertical)
+
+        collapsedUrlBar.addSubview(smallLockIcon)
+        collapsedUrlBar.addSubview(truncatedUrlText)
+        collapsedUrlBar.backgroundColor = UIColor.clear
+        collapsedUrlBar.tintColor = UIColor.clear
 
         // UITextField doesn't allow customization of the clear button, so we create
         // our own so we can use it as the rightView.
@@ -336,6 +359,7 @@ class URLBar: UIView {
         let duration = UIConstants.layout.urlBarTransitionAnimationDuration / 2
 
         lockIcon.animateHidden(!visible, duration: duration)
+        smallLockIcon.animateHidden(!visible, duration: duration)
 
         self.layoutIfNeeded()
         UIView.animate(withDuration: duration) {
@@ -496,6 +520,7 @@ class URLBar: UIView {
 
     fileprivate func setTextToURL() {
         var displayURL: String? = nil
+        var truncatedURL: String? = nil
 
         if let url = url {
             // Strip the username/password to prevent domain spoofing.
@@ -503,8 +528,63 @@ class URLBar: UIView {
             components?.user = nil
             components?.password = nil
             displayURL = components?.url?.absoluteString
+            truncatedURL = components?.host
         }
         urlText.text = displayURL
+        truncatedUrlText.text = truncatedURL
+    }
+
+    func collapseUrlBar(willCollapse: Bool) {
+        if willCollapse {
+            self.isUserInteractionEnabled = false
+            deleteButton.alpha = 0
+            urlTextContainer.alpha = 0
+            lockIcon.alpha = 0
+            urlText.alpha = 0
+            collapsedUrlBar.alpha = 1
+            truncatedUrlText.alpha = 1
+
+            addSubview(collapsedUrlBar)
+
+            collapsedUrlBar.snp.remakeConstraints { make in
+                make.top.equalTo(self).offset(20)
+                make.bottom.equalTo(self)
+                make.leading.equalTo(toolset.stopReloadButton.snp.trailing).inset(-16)
+                make.width.equalTo(self.frame.width/2)
+                make.height.equalTo(UIConstants.layout.collapsedUrlBarHeight)
+            }
+
+            truncatedUrlText.snp.remakeConstraints { make in
+                make.top.bottom.trailing.equalTo(collapsedUrlBar)
+                make.leading.equalTo(smallLockIcon.snp.trailing)
+            }
+
+            smallLockIcon.snp.remakeConstraints { make in
+                make.centerY.equalTo(collapsedUrlBar)
+
+//                make.leading.equalTo(collapsedUrlBar).offset(10)
+//                make.trailing.equalTo(truncatedUrlText.snp.leading).offset(4)
+
+                hideLockConstraints.append(contentsOf: [
+                    make.leading.equalTo(collapsedUrlBar.snp.leading).constraint,
+                    make.trailing.equalTo(truncatedUrlText.snp.leading).constraint,
+                    make.width.equalTo(0).constraint
+                    ])
+            }
+
+            self.layoutIfNeeded()
+        } else {
+            self.isUserInteractionEnabled = true
+            deleteButton.alpha = 1
+            urlTextContainer.alpha = 1
+            lockIcon.alpha = 1
+            urlText.alpha = 1
+            collapsedUrlBar.alpha = 0
+            truncatedUrlText.alpha = 0
+
+            collapsedUrlBar.removeFromSuperview()
+            self.layoutIfNeeded()
+        }
     }
 }
 

@@ -428,14 +428,22 @@ extension BrowserViewController: BrowserDelegate {
         switch scrollBarOffsetAlpha {
         case 0:
             scrollBarState = .expanded
+            UIView.animate(withDuration: UIConstants.layout.urlBarTransitionAnimationDuration, delay: 0, options: .allowUserInteraction, animations: { _ in
+                self.urlBar.collapseUrlBar(willCollapse: false)
+            }, completion: { _ in
+                self.scrollBarState = .expanded
+            })
         case 1:
-            scrollBarState = .collapsed
+            UIView.animate(withDuration: UIConstants.layout.urlBarTransitionAnimationDuration, delay: 0, options: .allowUserInteraction, animations: { _ in
+            self.urlBar.collapseUrlBar(willCollapse: true)
+            }, completion: { _ in
+                self.scrollBarState = .collapsed
+            })
         default:
             scrollBarState = .transitioning
         }
 
-        self.urlBar.alpha = max(0, (1 - scrollBarOffsetAlpha * 2))
-        self.urlBarTopConstraint.update(offset: -scrollBarOffsetAlpha * UIConstants.layout.urlBarHeight)
+        self.urlBarTopConstraint.update(offset: -scrollBarOffsetAlpha * (UIConstants.layout.urlBarHeight - UIConstants.layout.collapsedUrlBarHeight))
         self.toolbarBottomConstraint.update(offset: scrollBarOffsetAlpha * UIConstants.layout.browserToolbarHeight)
         scrollView.bounds.origin.y += (lastOffsetAlpha - scrollBarOffsetAlpha) * UIConstants.layout.urlBarHeight
         lastScrollOffset = scrollView.contentOffset
@@ -446,7 +454,7 @@ extension BrowserViewController: BrowserDelegate {
 
         scrollBarState = .animating
         UIView.animate(withDuration: UIConstants.layout.urlBarTransitionAnimationDuration, delay: 0, options: .allowUserInteraction, animations: { _ in
-            self.urlBar.alpha = 1
+            self.urlBar.collapseUrlBar(willCollapse: false)
             self.urlBarTopConstraint.update(offset: 0)
             self.toolbarBottomConstraint.update(inset: 0)
             scrollView.bounds.origin.y += self.scrollBarOffsetAlpha * UIConstants.layout.urlBarHeight
@@ -462,8 +470,8 @@ extension BrowserViewController: BrowserDelegate {
 
         scrollBarState = .animating
         UIView.animate(withDuration: UIConstants.layout.urlBarTransitionAnimationDuration, delay: 0, options: .allowUserInteraction, animations: { _ in
-            self.urlBar.alpha = 0
-            self.urlBarTopConstraint.update(offset: -UIConstants.layout.urlBarHeight)
+            self.urlBar.collapseUrlBar(willCollapse: true)
+            self.urlBarTopConstraint.update(offset: -UIConstants.layout.urlBarHeight + UIConstants.layout.collapsedUrlBarHeight)
             self.toolbarBottomConstraint.update(offset: UIConstants.layout.browserToolbarHeight)
             scrollView.bounds.origin.y += (self.scrollBarOffsetAlpha - 1) * UIConstants.layout.urlBarHeight
             self.scrollBarOffsetAlpha = 1
