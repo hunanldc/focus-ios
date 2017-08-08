@@ -333,6 +333,11 @@ extension BrowserViewController: BrowserToolsetDelegate {
 }
 
 extension BrowserViewController: BrowserDelegate {
+
+    func browser(_ browser: Browser, didLongPressImage path: String) {
+        print("image long pressed")
+    }
+
     func browserDidStartNavigation(_ browser: Browser) {
         urlBar.isLoading = true
         browserToolbar.isLoading = true
