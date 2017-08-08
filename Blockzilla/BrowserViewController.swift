@@ -349,12 +349,17 @@ extension BrowserViewController: BrowserDelegate {
 
     func browser(_ browser: Browser, didLongPressImage path: String) {
 
-        let saveImage: (String) -> Void = {
-            guard let url = URL(string: $0) else { return }
+        let getImage: (String) -> UIImage? = { path in
+            guard let url = URL(string: path) else { return nil }
             let request = URLRequest(url: url)
             let response = URLCache.shared.cachedResponse(for: request)
-            guard let data = (response?.data ?? (try? Data(contentsOf: url))),
-                let image = UIImage(data: data) else { return }
+            guard let data = (response?.data ?? (try? Data(contentsOf: url))) else { return nil }
+
+            return UIImage(data: data)
+        }
+
+        let saveImage: (String) -> Void = { path in
+            guard let image = getImage(path) else { return }
 
             UIImageWriteToSavedPhotosAlbum(image, self, #selector(self.image(_:didFinishSavingWithError:contextInfo:)), nil)
         }
@@ -362,10 +367,8 @@ extension BrowserViewController: BrowserDelegate {
         let vc = UIAlertController(title: path, message: nil, preferredStyle: .actionSheet)
         vc.addAction(UIAlertAction(title: "Copy Link", style: .default) { _ in UIPasteboard.general.string = path })
         vc.addAction(UIAlertAction(title: "Share Link", style: .default) { _ in self.share(url: path) })
-        vc.addAction(UIAlertAction(title: "Save Image", style: .default) { _ in
-            print("saving!!!!!")
-            saveImage(path) })
-        vc.addAction(UIAlertAction(title: "Copy Image", style: .default) { _ in print("copy image") })
+        vc.addAction(UIAlertAction(title: "Save Image", style: .default) { _ in saveImage(path) })
+        vc.addAction(UIAlertAction(title: "Copy Image", style: .default) { _ in UIPasteboard.general.image = getImage(path) })
         vc.addAction(UIAlertAction(title: "Cancel", style: .cancel))
 
         present(vc, animated: true, completion: nil)
