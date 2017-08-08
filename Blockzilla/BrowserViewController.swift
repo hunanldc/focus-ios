@@ -334,8 +334,46 @@ extension BrowserViewController: BrowserToolsetDelegate {
 
 extension BrowserViewController: BrowserDelegate {
 
+    func image(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
+        if let error = error {
+            // we got back an error!
+            let ac = UIAlertController(title: "Save error", message: error.localizedDescription, preferredStyle: .alert)
+            ac.addAction(UIAlertAction(title: "OK", style: .default))
+            present(ac, animated: true)
+        } else {
+            let ac = UIAlertController(title: "Saved!", message: "Your altered image has been saved to your photos.", preferredStyle: .alert)
+            ac.addAction(UIAlertAction(title: "OK", style: .default))
+            present(ac, animated: true)
+        }
+    }
+
     func browser(_ browser: Browser, didLongPressImage path: String) {
-        print("image long pressed")
+
+        let saveImage: (String) -> Void = {
+            guard let url = URL(string: $0) else { return }
+            let request = URLRequest(url: url)
+            let response = URLCache.shared.cachedResponse(for: request)
+            guard let data = (response?.data ?? (try? Data(contentsOf: url))),
+                let image = UIImage(data: data) else { return }
+
+            UIImageWriteToSavedPhotosAlbum(image, self, #selector(self.image(_:didFinishSavingWithError:contextInfo:)), nil)
+        }
+
+        let vc = UIAlertController(title: path, message: nil, preferredStyle: .actionSheet)
+        vc.addAction(UIAlertAction(title: "Copy Link", style: .default) { _ in UIPasteboard.general.string = path })
+        vc.addAction(UIAlertAction(title: "Share Link", style: .default) { _ in self.share(url: path) })
+        vc.addAction(UIAlertAction(title: "Save Image", style: .default) { _ in
+            print("saving!!!!!")
+            saveImage(path) })
+        vc.addAction(UIAlertAction(title: "Copy Image", style: .default) { _ in print("copy image") })
+        vc.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        present(vc, animated: true, completion: nil)
+    }
+
+    func share(url: String) {
+        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        present(vc, animated: true)
     }
 
     func browserDidStartNavigation(_ browser: Browser) {
